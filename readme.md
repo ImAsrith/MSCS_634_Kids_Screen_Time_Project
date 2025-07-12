@@ -1,4 +1,4 @@
-# MSCS_634_ProjectDeliverable_1
+# MSCS 634 Kids Screen Time Project
 
 ## Dataset  
 **Indian Kids ScreenTime 2025**  
