@@ -1,54 +1,72 @@
-# MSCS 634 Kids Screen Time Project
+# MSCS 634 Kids Screen Time Project 
+**Author:** Asrith Krishna Vejandla  
+**Date:** 11th-13th July 2025  
 
-## Dataset  
-**Indian Kids ScreenTime 2025**  
-- **Records:** 9,712  
-- **Features (8):**  
-  - `Age` (8–18 years)  
-  - `Gender`  
-  - `Avg_Daily_Screen_Time_hr`  
-  - `Primary_Device`  
-  - `Exceeded_Recommended_Limit` (Yes/No)  
-  - `Educational_to_Recreational_Ratio` (0–1)  
-  - `Health_Impacts` (e.g. Anxiety, Poor sleep, Eye Strain, and “None”)  
-  - `Urban_or_Rural`
+## Dataset at a glance  
+* **Source:** Kaggle – *Indian Kids ScreenTime 2025*  
+* **Rows:** 9 668  *Columns:* 8 original + engineered  
+* **Core fields** `Age · Gender · Urban_or_Rural · Avg_Daily_Screen_Time_hr · Primary_Device · Educational_to_Recreational_Ratio · Exceeded_Recommended_Limit · Health_Impacts`
 
-## Cleaning Steps  
-1. **Missing values**  
-   - Filled `Health_Impacts` NaNs with `"None"`.  
-   - Imputed numeric gaps (e.g. screen time) with column medians.  
-   - Filled categorical gaps (e.g. `Primary_Device`) with mode.  
-2. **Duplicates**  
-   - Removed exact duplicate rows.  
-3. **Inconsistent data**  
-   - Dropped rows where `Age` was outside 8–18 years (n = 3).
+---
 
-## Exploratory Data Analysis  
-- **Distribution**  
-  - Avg daily screen time is right-skewed (median ≈ 4 hr, IQR ≈ 3–6 hr) with a long tail to 14 hr.  
-- **Outliers**  
-  - Genuine heavy-use cases (> 8 hr) retained for later modelling.  
-- **Correlations**  
-  - `Age` vs. screen time: weak positive (ρ≈0.11).  
-  - `Age` vs. educational ratio: moderate negative (ρ≈–0.49).  
-  - `Ratio` vs. screen time: near zero (ρ≈–0.08), indicating independent dimensions.  
-- **Age vs. Screen Time Scatter**  
-  - Youngest children (8–10) show the widest variation, including extreme high values.
+## ▶ Deliverable 1 – Data Collection, Cleaning & Exploration  
+*Notebook:* `Deliverable_1/Residency_Project.ipynb`  
 
-## Key Insights  
-1. **Quantity vs. Quality**  
-   - “How long” (hrs/day) and “how educational” (ratio) behave independently—both merit separate modelling.  
-2. **Age patterns**  
-   - Older teens tend toward consistent mid-range use; younger kids vary more.  
-3. **Model prep**  
-   - Skewed `Avg_Daily_Screen_Time_hr` may benefit from a log transform.  
-   - Binning `Age` into stages (8–10, 11–13, 14–18) could capture non-linear effects.
+| Stage | Summary | Insight |
+|-------|---------|---------|
+| **Loading & inspection** | Verified dtypes, ranges. | Screen-time hours highly right-skewed. |
+| **Cleaning** | Filled missing `Health_Impacts` with “None”; median-imputed numeric gaps; removed three impossible ages; dropped duplicates. | Final tidy set: 9 668 rows × 8 cols. |
+| **EDA visualisations** | Histograms · box-plots · correlation heat-map · Age vs Hours scatter. | Quantity (hours) and quality (edu-ratio) are largely independent, setting up orthogonal modelling axes. |
 
-## Challenges  
-- Configuring Colab file upload vs. Kaggle API—opted for manual CSV upload for speed.  
-- A few out-of-range ages required domain-based exclusion.
+---
 
-## Next Steps  
-- **Deliverable 2:** Build regression models to predict screen time.  
-- **Deliverable 3:** Classify “heavy users” and cluster usage archetypes.  
-- **Deliverable 4:** Derive actionable recommendations and discuss ethical implications.
+## ▶ Deliverable 2 – Regression Modelling  
+*Notebook:* `Deliverable_2/Residency_Project.ipynb`
+
+| Model | Features | Test R² | RMSE (hr) | Headline |
+|-------|----------|---------|-----------|----------|
+| Simple linear | Age | 0.018 | 1.66 | Age alone explains < 2 %. |
+| Multiple linear | Age, gender, device, locale, ratio, interaction | 0.027 | 1.65 | Extra features add only marginal lift. |
+| Ridge (α≈0.46) | same | 0.026 | **1.65** | Best error but still under-fits heavy users. |
+
+*28 % of hold-out cases land within ±1 hour.*  
+**Top drivers:** lower educational ratio ↑ hours; tablets add ≈0.6 hr; age adds ≈0.2 hr per year.
+
+---
+
+## ▶ Deliverable 3 – Classification · Clustering · Association Rules  
+*Notebook:* `Deliverable_3/Residency_Project.ipynb`
+
+### 3 · 1 Classification – Health-impact likelihood  
+* Logistic Regression (OvR) and tuned Random-Forest (OvR, depth = 5).  
+* Macro ROC-AUC ≈ 0.54–0.55; high recall but low precision → content mix and device matter, yet unseen lifestyle factors dominate.
+
+### 3 · 2 Unsupervised Clustering – Usage archetypes  
+* PCA (2D, 74 % variance) → K-Means (k = 3).  
+* **Cluster 0 Light-Educational** (3 253) – low hours, high ratio, negligible complaints.  
+* **Cluster 2 Balanced-Moderate** (3 306) – median hours, mixed content.  
+* **Cluster 1 Heavy-Recreational** (3 109) – longest hours, lowest ratio, most eye-strain & sleep issues.  
+* **Action:** prioritise targeted interventions for Cluster 1.
+
+### 3 · 3 Association-Rule Mining – Behaviour → Health patterns  
+* Apriori (support ≥ 5 %, conf ≥ 0.6, lift ≥ 1.2).  
+* Rule example: *LowEduRatio & Device_Laptop ⇒ Poor Sleep* (conf 0.64 · lift 1.33).  
+* Message: content quality in the 3–6 hr band is more predictive of complaints than extreme time alone.
+
+---
+
+## Ethical notes & limitations  
+* **Missing context:** no bedtime stamps, distance-to-screen, or parental rules → models under-fit extremes.  
+* **Class imbalance:** used `class_weight="balanced"` for rare labels.  
+* **Privacy:** dataset is anonymised; no PII processed.  
+* **Fairness:** recommendations target behaviours (device, ratio) rather than demographic identities.
+
+---
+
+## Reproducing the analysis  
+1. Clone the repo and open any `Residency_Project.ipynb` in Colab or Jupyter.  
+2. Run all cells; CSV is embedded in Deliverable 1 notebook.  
+3. Plots and metrics regenerate automatically.
+
+
+
